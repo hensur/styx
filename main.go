@@ -23,6 +23,23 @@ func main() {
 			Value:       time.Hour,
 			Destination: &flag.Duration,
 		},
+		cli.Int64Flag{
+			Name:        "end,e",
+			Usage:       "end of query range",
+			Value:       time.Now().Unix(),
+			Destination: &flag.End,
+		},
+		cli.Int64Flag{
+			Name:        "start,s",
+			Usage:       "start of query range",
+			Value:       time.Now().Unix() - 3600,
+			Destination: &flag.Start,
+		},
+		cli.BoolFlag{
+			Name:        "range,r",
+			Usage:       "Set if query by start and end",
+			Destination: &flag.Range,
+		},
 		cli.BoolTFlag{
 			Name:        "header",
 			Usage:       "Include a header into the csv file",
@@ -90,6 +107,9 @@ type flags struct {
 	Duration   time.Duration
 	Header     bool
 	Prometheus string
+	Start      int64
+	End        int64
+	Range      bool
 }
 
 var flag flags
@@ -99,8 +119,15 @@ func exportAction(c *cli.Context) error {
 		return fmt.Errorf(color.RedString("need a query to run"))
 	}
 
-	end := time.Now()
-	start := end.Add(-1 * flag.Duration)
+	var start time.Time
+	var end time.Time
+	if flag.Range {
+		end = time.Unix(flag.End, 0)
+		start = time.Unix(flag.Start, 0)
+	} else {
+		end = time.Now()
+		start = end.Add(-1 * flag.Duration)
+	}
 
 	results, err := Query(flag.Prometheus, start, end, c.Args().First())
 	if err != nil {
